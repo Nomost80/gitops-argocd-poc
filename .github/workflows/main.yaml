@@ -49,7 +49,7 @@ jobs:
     env:
       HARBOR_HOST: harbor.gslab.lan
       CONTAINER_REPO: harbor.gslab.lan/osiris/osiris
-      CHART_REPO: harbor.gslab.lan/chartrepo/osiris
+      CHART_REPO: https://harbor.gslab.lan/chartrepo/osiris
     steps:
       - uses: actions/checkout@v2
 
