@@ -9,6 +9,8 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt install -y moreutils
+
       - uses: actions/checkout@v2
 
       - name: Cache node modules
@@ -22,8 +24,13 @@ jobs:
       - working-directory: ./app
         run: npm install
 
-      - working-directory: ./app
-        run: npm run build:prod
+      - name: Build app with ncc
+        working-directory: ./app
+        run: |
+          mv tsconfig.json tsconfig.dev.json
+          mv tsconfig.build.json tsconfig.json
+          jq '.extends = "./tsconfig.dev.json"' tsconfig.json | sponge tsconfig.json
+          npm run build
 
       - run: docker build --build-arg env=test ./app -t osiris
 

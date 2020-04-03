@@ -8,6 +8,8 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'ci skip')"
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt install -y moreutils
+
       - uses: actions/checkout@v2
 
       - name: Cache node modules
@@ -21,8 +23,13 @@ jobs:
       - working-directory: ./app
         run: npm install
 
-      - working-directory: ./app
-        run: npm run build:prod
+      - name: Build app with ncc
+        working-directory: ./app
+        run: |
+          mv tsconfig.json tsconfig.dev.json
+          mv tsconfig.build.json tsconfig.json
+          jq '.extends = "./tsconfig.dev.json"' tsconfig.json | sponge tsconfig.json
+          npm run build
   test:
     runs-on: ubuntu-latest
     needs: build
@@ -49,7 +56,7 @@ jobs:
     env:
       HARBOR_HOST: harbor.gslab.lan
       CONTAINER_REPO: harbor.gslab.lan/osiris/osiris
-      CHART_REPO: harbor.gslab.lan/chartrepo/osiris
+      CHART_REPO: https://harbor.gslab.lan/chartrepo/osiris
     steps:
       - uses: actions/checkout@v2
 
@@ -100,8 +107,13 @@ jobs:
       - working-directory: ./app
         run: npm install
 
-      - working-directory: ./app
-        run: npm run build:prod
+      - name: Build app with ncc
+        working-directory: ./app
+        run: |
+          mv tsconfig.json tsconfig.dev.json
+          mv tsconfig.build.json tsconfig.json
+          jq '.extends = "./tsconfig.dev.json"' tsconfig.json | sponge tsconfig.json
+          npm run build
 
       - name: Build and push Docker image to Harbor
         run: |

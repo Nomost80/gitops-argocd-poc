@@ -1,9 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"],
-  "compilerOptions": {
-    "module": "amd",
-    "moduleResolution": "node",
-    "outFile": "./dist/index.js"
-  }
+  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
 }
