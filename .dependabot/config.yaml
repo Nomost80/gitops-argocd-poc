@@ -1,0 +1,11 @@
+version: 1
+update_configs:
+  - package_manager: "javascript"
+    directory: "./app"
+    update_schedule: "daily"
+    allowed_updates:
+      - match:
+          update_type: "security"
+  - package_manager: "docker"
+    directory: "./app"
+    update_schedule: "weekly"

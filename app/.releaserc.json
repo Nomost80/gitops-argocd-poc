@@ -1,0 +1,44 @@
+{
+  "branches": ["master", {
+    "name": "uat",
+    "prerelease": true,
+    "channel": "rc"
+  }, {
+    "name": "develop",
+    "prerelease": true,
+    "channel": "dev"
+  }],
+  "plugins": [
+    ["@semantic-release/commit-analyzer", {
+      "preset": "conventionalcommits",
+      "presetConfig": {
+        "types": [
+          { "type": "infra" }
+        ]
+      },
+      "releaseRules": [
+        { "type": "infra", "release": false }
+      ]
+    }],
+    ["@semantic-release/release-notes-generator", {
+      "preset": "conventionalcommits",
+      "presetConfig": {
+        "types": [
+          { "type": "feat", "section": ":rocket: Features" },
+          { "type": "fix", "section": ":bug: Bug Fixes" },
+          { "type": "perf", "section": ":zap: Performance Improvements" },
+          { "type": "revert", "section": ":rewind: Reverts" },
+          { "type": "refactor", "section": ":recycle: Code Refactoring" },
+          { "type": "test", "section": ":vertical_traffic_light: Tests" },
+          { "type": "build", "section": ":building_construction: Build System" },
+          { "type": "ci", "section": ":construction_worker: Continuous Integration" },
+          { "type": "infra", "section": ":computer: Infrastructure" },
+          { "type": "chore", "section": ":eyes: Miscellaneous Chores" },
+          { "type": "docs", "section": ":pencil: Documentation", "hidden": true },
+          { "type": "style", "section": ":lipstick: Styles", "hidden": true }
+        ]
+      }
+    }],
+    "@semantic-release/github"
+  ]
+}

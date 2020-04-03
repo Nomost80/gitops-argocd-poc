@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: osiris
+  namespace: argocd
+spec:
+  description: Gitops proof of concept with ArgoCD
+  sourceRepos:
+    - 'https://github.com/Nomost80/gitops-argocd-poc.git'
+  destinations:
+    - namespace: osiris-dev
+      server: https://kubernetes.default.svc
+    - namespace: osiris-uat
+      server: https://kubernetes.default.svc
+    - namespace: osiris-prod
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota
+    - group: ''
+      kind: LimitRange
+    - group: ''
+      kind: NetworkPolicy
+  orphanedResources:
+    warn: false

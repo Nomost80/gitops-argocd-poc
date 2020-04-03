@@ -1,0 +1,32 @@
+name: Compare Code Coverage
+on:
+  pull_request:
+    branches:
+      - master
+      - uat
+      - develop
+    paths:
+      - app/**
+jobs:
+  upload-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - working-directory: ./app
+        run: npm install
+
+      - working-directory: ./app
+        run: npm run test:cov
+
+      - name: Upload code coverage report to codecov
+        working-directory: ./app
+        run: bash <(curl -s https://codecov.io/bash)

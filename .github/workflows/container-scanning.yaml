@@ -1,0 +1,43 @@
+name: Container Scanning
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - app/Dockerfile
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - working-directory: ./app
+        run: npm install
+
+      - working-directory: ./app
+        run: npm run build:prod
+
+      - run: docker build --build-arg env=test ./app -t osiris
+
+      - name: Aqua Trivy scan
+        id: trivy
+        uses: homoluctus/gitrivy@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          image: osiris
+          vuln_type: os
+          issue: true
+
+      - name: Fail on vuln
+        if: steps.trivy.outputs.html_url
+        run: |
+          echo "Check the following issue: ${{ steps.trivy.outputs.html_url }}"
+          exit 1

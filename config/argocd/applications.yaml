@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: osiris-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: osiris
+  source:
+    repoURL: https://github.com/Nomost80/gitops-argocd-poc.git
+    targetRevision: develop
+    path: chart
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: osiris-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    validate: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: osiris-uat
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: osiris
+  source:
+    repoURL: https://github.com/Nomost80/gitops-argocd-poc.git
+    targetRevision: uat
+    path: chart
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-uat.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: osiris-uat
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    validate: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: osiris-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: osiris
+  source:
+    repoURL: https://github.com/Nomost80/gitops-argocd-poc.git
+    targetRevision: master
+    path: chart
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: osiris-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    validate: true

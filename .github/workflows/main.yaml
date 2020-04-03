@@ -1,0 +1,137 @@
+name: Main
+on:
+  push:
+    paths:
+      - app/**
+jobs:
+  build:
+    if: "!contains(github.event.head_commit.message, 'ci skip')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - working-directory: ./app
+        run: npm install
+
+      - working-directory: ./app
+        run: npm run build:prod
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - working-directory: ./app
+        run: npm install
+
+      - working-directory: ./app
+        run: npm run test && npm run test:e2e
+  release:
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/uat' || github.ref == 'refs/heads/develop'
+    runs-on: self-hosted
+    needs: test
+    env:
+      HARBOR_HOST: harbor.gslab.lan
+      CONTAINER_REPO: harbor.gslab.lan/osiris/osiris
+      CHART_REPO: harbor.gslab.lan/chartrepo/osiris
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache semrel node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: semrel-deps
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-${{ env.cache-name }}
+
+      - working-directory: ./app
+        run: npm install --prefix $HOME -g semantic-release conventional-changelog-conventionalcommits
+
+      - name: Semantic release
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/uat'
+        working-directory: ./app
+        run: |
+          NOTES=$($HOME/bin/semantic-release)
+          echo "::debug $NOTES"
+          SEMVER=$(echo "$NOTES" | grep -oP '(?<=Published release )(.*?)(?= on)')
+          echo "::debug $SEMVER"
+          [ -z "$SEMVER" ] && echo "No new release needed" || echo "::set-env name=VERSION::${SEMVER}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Semantic release dry run
+        if: github.ref == 'refs/heads/develop'
+        working-directory: ./app
+        run: |
+          NOTES=$($HOME/bin/semantic-release --dry-run)
+          echo "::debug $NOTES"
+          SEMVER=$(echo "$NOTES" | grep -oP '(?<=Published release )(.*?)(?= on)')
+          echo "::debug $SEMVER"
+          VERSION="${GITHUB_SHA}-dev"
+          [ -z "$SEMVER" ] && echo "No new release needed" || echo "::set-env name=VERSION::$VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - working-directory: ./app
+        run: npm install
+
+      - working-directory: ./app
+        run: npm run build:prod
+
+      - name: Build and push Docker image to Harbor
+        run: |
+          ENV=$(echo '{"master": "prod", "uat": "test", "develop": "dev"}' | jq -r ".${GITHUB_REF##*/}")
+          TAG=$(echo '{"master": "stable", "uat": "rc", "develop": "latest"}' | jq -r ".${GITHUB_REF##*/}")
+          echo "${{ secrets.HARBOR_PASSWORD }}" | docker login -u ${{ secrets.HARBOR_USERNAME }} --password-stdin ${{ env.CONTAINER_REPO }}
+          docker build --build-arg env=$ENV -t ${{ env.CONTAINER_REPO }}:${{ env.VERSION }} -t ${{ env.CONTAINER_REPO }}:$TAG ./app
+          docker push ${{ env.CONTAINER_REPO }}
+
+      - name: Update the chart application version
+        working-directory: ./chart
+        run: yq w Chart.yaml appVersion ${{ env.VERSION }} | sponge Chart.yaml
+
+      - name: Update the chart version
+        if: github.ref == 'refs/heads/master'
+        run: helm local-chart-version bump -c ./chart -s minor
+
+      - name: Add Harbor chart repository
+        if: github.ref == 'refs/heads/master'
+        run: helm repo add osiris ${{ env.CHART_REPO }} --username ${{ secrets.HARBOR_USERNAME }} --password ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Push Helm chart
+        if: github.ref == 'refs/heads/master'
+        run: helm push ./chart osiris
+
+      - name: Commit files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "github-actions"
+          git commit --no-verify -i chart/Chart.yaml -m "chore: helm chart bumped [skip ci]"
+
+      - name: Push changes
+        run: git push "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ${{ github.ref }}

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  url: https://argocd.gslab.lan
+  statusbadge.enabled: 'true'
+  users.anonymous.enabled: "false"
+  repositories: |
+    - url: https://github.com/Nomost80/gitops-argocd-poc
+      passwordSecret:
+        name: github-secret
+        key: password
+      usernameSecret:
+        name: github-secret
+        key: username
+    - type: helm
+      url: https://harbor.gslab.lan/chartrepo/osiris
+      name: harbor-osiris
+      usernameSecret:
+        name: harbor-secret
+        key: username
+      passwordSecret:
+        name: harbor-secret
+        key: password
