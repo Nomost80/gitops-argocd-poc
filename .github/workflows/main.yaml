@@ -60,17 +60,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Cache semrel node modules
-        uses: actions/cache@v1
-        env:
-          cache-name: semrel-deps
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-${{ env.cache-name }}
-
-      - working-directory: ./app
-        run: npm install --prefix $HOME -g semantic-release conventional-changelog-conventionalcommits
-
       - name: Semantic release
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/uat'
         working-directory: ./app
